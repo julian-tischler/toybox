@@ -1,0 +1,17 @@
+# Python
+__pycache__/
+*.py[cod]
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Temp files left by an interrupted project save
+.screenlens_*.tmp
+
+# Editors / OS
+.idea/
+.vscode/
+Thumbs.db
+.DS_Store
