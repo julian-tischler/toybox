@@ -1,11 +1,9 @@
-# ScreenLens
+# Toybox
 
-**Programmable screen reading with OCR.** Put transparent "lenses" over parts of your
-screen, then write small Python scripts that read them as text, numbers or colours using OCR.
-You can run a script once or in a loop.
-
-Typical uses: logging values from a GUI that has no API (instrument software, dashboards,
-games, legacy tools), computing derived values live, or reacting when something on screen changes.
+**A modular workspace of small tools you can script.** Arrange panels — screen lenses, Python
+scripts, and more tools to come — in any layout you like, then write short scripts that read
+from them. Toybox grew out of *ScreenLens* (tag `v1.0`), whose transparent OCR lenses are now
+one tool among several.
 
 ```python
 v = Lenses["voltage"].get_float()
@@ -18,39 +16,33 @@ if v and i:
 
 ## Features
 
-- **Input lenses**: borderless, see-through windows that stay on top. Drag one by its coloured
-  header and resize it from its edges. The capture area is only the see-through inside, so a
-  lens never captures its own frame.
-- **Built-in mini IDE**: script editor, console, and a lens sidebar where each lens shows its
-  colour, can be renamed by double-clicking its name, and deleted with its ✕ icon. The panels
-  are separated by divider lines that light up on hover: drag one to resize, or double-click it
-  to collapse or restore the sidebar / console. A collapsed panel keeps its divider at the
-  window edge, so you can double-click it again to bring the panel back.
-  Dark theme, with a dark title bar on Windows 10/11.
-- **Run modes**: *Run Once* (`Ctrl+Enter`) or *Run Continuous* at a set interval (minimum 50 ms).
-  While anything runs, the *Run Continuous* button turns into *Stop*, which also aborts a long
-  *Run Once* script.
-- **Persistent namespace**: variables survive between runs, so continuous scripts can keep
-  counters, previous values and similar state.
-- **Hide while measuring**: lenses briefly become invisible during each capture so they never
-  show up in the pixels. The *Settle* delay gives the compositor time to repaint first.
+- **Modular workspace**: every space holds one tool. Double-click a divider (between two
+  panels) or a window-edge line to open a new space there and pick a tool for it. Split
+  panels in any direction, drag a panel by its header to dock it next to another panel or
+  along a window edge, or drop it in the middle of another panel to swap the two.
+- **Multiple instances**: several Script panels can run side by side, each with its own editor,
+  console, interval and variables.
+- **Scripts are one-way and predictable**: a script runs only when you press *Run* (or
+  `Ctrl+Enter`). It reads from the workspace; nothing in the workspace triggers it.
+- **Lenses**: borderless, see-through windows that stay on top. Scripts read them as
+  `Lenses["name"]` (text, numbers, average colour, raw pixels, colour masks). Lenses briefly
+  become invisible during each capture, so they never appear in the pixels.
+- **Code editor**: line numbers, Python highlighting, auto-closing brackets and quotes, smart
+  indentation, comment toggle, line move/duplicate/cut, word jumps.
+- **Projects and layouts**: save everything (layout, panel contents, lenses, preferences) as a
+  project, or save just the arrangement of panels as a reusable layout. The last workspace is
+  restored automatically on the next start.
 - **OCR tuned for small readouts**: upscaling, Otsu binarisation or grey normalisation,
-  optional blur, character whitelists/blacklists (non-ASCII characters work too), and number
-  parsing that understands locales (`1.234,5`, `1,234.5`, `90,1`).
-- **Colour masking**: `color_mask("green")` returns a lens that only sees one colour, so you can
-  read green text next to white text. `channel("g")` keeps a single RGB channel.
-- **Projects**: save and load the script, the lens layout and the settings as one JSON file.
-  You can also load a plain `.py` file to replace only the script.
+  character whitelists/blacklists, colour masking, locale-aware number parsing.
 
 ## Requirements
 
-- Python 3.8+ with Tkinter (included in the standard Windows/macOS installers)
+- Python 3.9+
 - [Tesseract OCR](https://github.com/tesseract-ocr/tesseract) installed on the system
-- Python packages: `mss`, `opencv-python`, `numpy`, `pytesseract`
+- Python packages: `PySide6`, `mss`, `opencv-python`, `numpy`, `pytesseract`
 
-Supported platforms: **Windows** is the main target (true colour-key transparency, DPI
-awareness). macOS uses native window transparency. On other platforms lenses fall back to a
-translucent window, and its tint may slightly affect captures.
+Windows is the main target (lens capture uses physical-pixel window positions there). Other
+platforms work with lens positions scaled from Qt's logical coordinates.
 
 ## Installation
 
@@ -59,7 +51,7 @@ pip install -r requirements.txt
 ```
 
 Install Tesseract (Windows builds: [UB Mannheim installer](https://github.com/UB-Mannheim/tesseract/wiki)).
-ScreenLens looks for the executable in this order:
+Toybox looks for the executable in this order:
 
 1. the `TESSERACT_CMD` environment variable
 2. `tesseract` on `PATH`
@@ -67,33 +59,57 @@ ScreenLens looks for the executable in this order:
 
 ## Running
 
+From the project folder:
+
 ```bash
-cd src
-python main.py
+python -m toybox
 ```
 
-`main.py` turns on DPI awareness on Windows, so Tk and the screen capture use the same
-physical pixels. It also checks for the required packages and tells you what is missing.
+On Windows, `toybox.bat` starts it from the project's `.venv` without a console window.
 
-## Workflow
+## Using the workspace
 
-1. Type a name in the **Input Lenses** sidebar and click the **+** icon (or press Enter).
-2. Drag the lens over the region you want to read and resize it to fit. The eye icon in the
-   sidebar header hides or shows all lenses.
-3. Write a script that uses `Lenses["name"]`.
-4. Press **Run Once** or **Run Continuous** (bottom right of the script panel). `print()` output
-   and tracebacks appear in the console.
-5. **Save** (`Ctrl+S`), **Save As** (`Ctrl+Shift+S`) or **Load** (`Ctrl+O`) a project; the
-   buttons sit at the bottom left of the script panel.
+| Do this | To |
+|---|---|
+| Double-click a **divider** between panels | Open a new empty space there |
+| Double-click a **window-edge line** (left, right, top, bottom) | Open a new space along that edge |
+| Click a tool in an empty space | Fill it (Lenses, Script, …) |
+| Drag a panel's **header** onto another panel | Dock it on that side (drop near an edge) or swap the two (drop in the middle) |
+| Drag a panel's header onto a **window-edge line** | Dock it along that whole edge |
+| Drag a divider | Resize |
+| Double-click a panel's **name** | Rename it (scripts use the name, e.g. `Lenses`, later `Plots["name"]`) |
+| Panel **⋯** menu | Split right/left/below/above, change tool, rename, tool actions (e.g. import/export `.py`) |
+| Panel **✕** | Close it (asks first if it has content) |
 
-**Preferences** (top left) opens a strip with the run interval, *Hide while measuring* and the
-*Settle* delay.
+**Menus**
+
+- **File**: New / Open / Save / Save As project (`Ctrl+N` / `Ctrl+O` / `Ctrl+S` / `Ctrl+Shift+S`),
+  Preferences (`Ctrl+,`).
+- **Workspace**: add a panel at an edge, save / load / reset the layout.
+- **Lenses**: add a lens (`Ctrl+L`), hide or show all lenses (`Ctrl+H`).
+
+**Preferences**: *Hide lenses while measuring*, the *Settle* delay after hiding, and the default
+run interval for new Script panels.
+
+### Lenses panel
+
+Type a name and press **+** (or Enter) to create a lens, then drag it over the region to read
+by its coloured header and resize it from its edges. Each row shows the lens colour; double-click
+a name to rename it, ✕ deletes it. The eye icon in the header hides or shows all lenses. Lenses
+belong to the whole app: several Lenses panels show the same list, and scripts can read lenses
+even when no Lenses panel is open.
+
+### Script panel
+
+An editor, a run bar and its own console. *Run Once* (`Ctrl+Enter`) runs the script with fresh
+variables. *Run Continuous* repeats it every *Every* ms and keeps variables between runs; while
+anything runs, the button becomes *Stop*, which also aborts a long *Run Once*.
 
 ### Editor shortcuts
 
 | Keys | Action |
 |---|---|
-| `Ctrl+Enter` | Run Once |
+| `Ctrl+Enter` | Run Once (this panel) |
 | `( [ { " '` | Auto-close; type the closer to step over it; Backspace deletes an empty pair; typed over a selection, wraps it |
 | `Enter` | Keeps the indentation, adds a level after `:` or an open bracket |
 | `Tab` / `Shift+Tab` | Indent / dedent the selected lines (`Tab` with no selection goes to the next 4-column stop) |
@@ -102,11 +118,10 @@ physical pixels. It also checks for the required packages and tells you what is 
 | `Ctrl+D` | Duplicate the current or selected lines |
 | `Ctrl+X` | With no selection: cut the whole current line (`Ctrl+V` pastes it back as a line above the cursor) |
 | `Shift+Left` / `Shift+Right` | Jump to the start / end of the word, across line ends (`Ctrl+Shift+Left/Right` still selects by word) |
-| `Ctrl+S` / `Ctrl+Shift+S` / `Ctrl+O` | Save / Save As / Load |
 
 ## Script API
 
-Each script runs with `exec()` on a worker thread. These names are available in its globals:
+Each script runs with `exec()` on its own worker thread. These names are available in its globals:
 
 ### `Lenses`
 
@@ -191,24 +206,35 @@ if status != globals().get("last"):
     last = status
 ```
 
-## Project file format
+## File formats
+
+**Project** (`*.toybox.json`) — everything:
 
 ```json
 {
-  "format": "screen-lens-project",
+  "format": "toybox-project",
   "version": 1,
-  "script": "...python source...",
+  "layout": {"type": "split", "orientation": "h", "sizes": [260, 900], "children": [
+    {"type": "panel", "kind": "lenses", "name": "lenses1", "state": {}},
+    {"type": "panel", "kind": "script", "name": "script1",
+     "state": {"source": "print('hi')\n", "interval_ms": 500}}
+  ]},
   "lenses": [
     {"name": "voltage", "color": "#00ff66", "left": 240, "top": 180, "width": 220, "height": 90}
   ],
-  "settings": {"interval_ms": 500, "settle_ms": 50, "hide_while_measuring": true}
+  "settings": {"hide_while_measuring": true, "settle_ms": 50, "interval_ms": 500}
 }
 ```
 
-Lens geometry is the whole lens window in absolute screen pixels. Files saved before the rename
-(`"format": "screen-automator-project"`) still load. Saves are atomic (written to
-a temp file, then swapped in). On load the file is validated, and lenses that would end up
-off-screen are put back in view.
+**Layout** (`*.layout.json`) — the same `layout` tree without panel contents, under
+`"format": "toybox-layout"`.
+
+A layout node is either a split (`orientation` `"h"` or `"v"`, `sizes`, `children`) or a
+panel (`kind`, `name`, `state`). Saves are atomic. ScreenLens v1 project files still open: they
+become a Lenses | Script layout holding the old script, lenses and settings.
+
+The last workspace is kept in `session.toybox.json` in the app-data folder
+(`%APPDATA%\Toybox\Toybox` on Windows) and restored on start.
 
 ## Environment variables
 
@@ -221,43 +247,53 @@ off-screen are put back in view.
 ## Project structure
 
 ```
-src/
-├── main.py         Entry point: DPI awareness, dependency check, starts the GUI
-├── gui_ide.py      Main window: preferences, lens sidebar, editor + run bar, console, theme, save/load
-├── editor_helpers.py  Editor shortcuts (auto-close, smart Enter, indent, comment, move/duplicate)
-├── icons.py        Loads the UI icons as Tk images (picks the size for the screen's DPI)
-├── assets/icons/   Pre-rendered icon PNGs; svg/ holds the SVG sources
-├── gui_lens.py     LensWindow (transparent overlay) and LensVisibility (hide-during-capture)
-├── vision.py       Capture (mss), colour masking + preprocessing (OpenCV), OCR (pytesseract), number parsing, Lens API
-├── executor.py     Runs scripts on a thread, redirects stdout/stderr, stop, trimmed tracebacks
-└── project_io.py   Saving and validating project JSON (no Tk, testable on its own)
-tools/
-└── render_icons.py Renders assets/icons/svg/*.svg to the themed PNGs (needs Pillow)
+toybox/
+├── __main__.py          Entry point: dependency check, Qt app, theme, main window
+├── core/                No widgets (except the Qt lens windows); usable on its own
+│   ├── vision.py        Capture (mss), colour masking + preprocessing (OpenCV), OCR, number parsing, Lens API
+│   ├── lenses.py        LensWindow (transparent overlay) + LensManager (registry, hide-while-measuring)
+│   ├── executor.py      Script runner: worker thread per script, per-thread print() routing, stop
+│   ├── bridge.py        gui_call(): run a function on the GUI thread from a script thread
+│   └── project_io.py    Project / layout files (validation, atomic save, v1 import)
+├── editor/
+│   ├── helpers.py       Editing rules as pure string functions (testable without a display)
+│   └── code_editor.py   QPlainTextEdit + line numbers + Python highlighting + the rules
+├── panels/              One module per tool
+│   ├── base.py          Panel contract + registry
+│   ├── lenses_panel.py
+│   └── script_panel.py
+├── ui/
+│   ├── main_window.py   Menus, projects, layouts, preferences, session restore
+│   ├── workspace.py     Split tree, dividers, edge lines, drag & drop, picker, (de)serialisation
+│   ├── context.py       AppContext (lenses, preferences, workspace) + script namespace
+│   ├── theme.py · icons.py · widgets.py · preferences.py
+└── assets/icons/        SVG icons (recoloured at runtime)
 ```
 
-Tk 8.6 cannot display SVG, so the icons are shipped as PNGs in two colours and five sizes
-(100–200 % scaling). After changing an SVG, a theme colour in `icons.py` or the sizes, run:
+### Adding a tool
 
-```bash
-pip install pillow
-```
+Subclass `Panel` in a new module under `toybox/panels/`, give it a `kind` and `title`, decorate
+it with `@register`, and import the module in `panels/__init__.py`. Implement `state()` /
+`load_state()` to have its contents saved in projects. It then appears in every empty space's
+picker and in each panel's *Change tool* menu.
 
-```bash
-python tools/render_icons.py
-```
+To make a tool readable from scripts, return a global name from `script_collection()` (e.g.
+`"Plots"`) and an object from `script_handle()`. Scripts then get `Plots["panel name"]`.
+Scripts run on worker threads, so anything a handle does with widgets must go through
+`core.bridge.gui_call`.
 
 ### Design notes
 
-- **Thread safety**: scripts run on a worker thread, and Tk is only touched from the GUI thread.
-  Script output goes through a queue that the GUI reads every 30 ms. Hide requests from
-  `capture_guard` are posted to the GUI thread and picked up by a 5 ms poll.
-- **No flicker**: after a capture, lenses stay hidden for a short time (`linger_ms`, 80 ms), so
-  reading several lenses in a row doesn't make them blink.
-- **Stopping**: *Stop* raises an exception inside the worker thread, which takes effect at the
-  next Python bytecode. A script blocked in a long C call (for example a slow Tesseract run)
-  stops once that call returns.
-- **Hide method**: `CAPTURE_HIDE_METHOD` in `gui_lens.py` can be `"alpha"` (default) or
-  `"withdraw"`. If lenses still show up in captures, try the other one.
+- **Threads**: every script runs on its own worker thread; Qt widgets are only touched on the
+  GUI thread. `print()` is routed by thread to the right panel's console.
+- **Lens capture**: a capture asks the GUI thread (through the bridge) to make all lenses
+  transparent, waits *Settle* ms for the compositor, grabs the pixels, and shows the lenses
+  again 80 ms after the last capture, so reading several lenses in a row doesn't flicker. Lens
+  regions are kept as plain physical-pixel integers that scripts read without touching Qt.
+- **Stopping**: *Stop* raises an exception inside the script's thread at the next Python
+  bytecode; a script blocked in a long C call (e.g. a slow OCR) stops once that call returns.
+- **Workspace tree**: a split with one child is replaced by that child, and a split nested in a
+  split of the same orientation is merged into it, so the layout stays tidy however panels move.
 
 ## Tips for better OCR
 

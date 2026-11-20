@@ -8,7 +8,7 @@ venv/
 env/
 
 # Temp files left by an interrupted project save
-.screenlens_*.tmp
+.toybox_*.tmp
 
 # Editors / OS
 .idea/
