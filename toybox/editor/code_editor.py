@@ -57,12 +57,9 @@ class PythonHighlighter(QSyntaxHighlighter):
 
     def highlightBlock(self, text: str) -> None:
         if self.previousBlockState() not in (1, 2) and is_bang_line(text):
-            # "! text" print shorthand: the text is literal, not Python.
-            bang = len(text) - len(text.lstrip())
-            self.setFormat(bang, 1, self._rules[0][1])
-            self.setFormat(bang + 1, len(text) - bang - 1, self._string)
-            self.setCurrentBlockState(0)
-            return
+            # "! expr" print shorthand: colour the "!" like a keyword; the rest is
+            # ordinary Python and is highlighted below.
+            self.setFormat(len(text) - len(text.lstrip()), 1, self._rules[0][1])
         for rx, fmt, group in self._rules:
             for m in rx.finditer(text):
                 self.setFormat(m.start(group), m.end(group) - m.start(group), fmt)

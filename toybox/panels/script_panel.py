@@ -27,7 +27,8 @@ DEFAULT_SCRIPT = '''\
 # Lenses["name"].get_text() / .get_float() / .get_color_avg() / .get_raw()
 # Only one colour:  Lenses["name"].color_mask("green").get_text()
 # Notes["note1"].get_text() / .set_text("...")
-# A line "! some text" prints some text.
+# Plots["plot1"].line(x, y, name="v") / .scatter / .bar / .hist / .append("v", value)
+# "! expr" prints expr:  ! "hello"   ! Lenses["name"].get_text()
 # Run: Ctrl+Enter.  Run Continuous keeps variables between runs.
 
 '''

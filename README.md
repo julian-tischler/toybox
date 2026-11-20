@@ -24,7 +24,10 @@ if v and i:
   console, interval and variables.
 - **Scripts are one-way and predictable**: a script runs only when you press *Run* (or
   `Ctrl+Enter`). It can read and write tools (lenses, notes, …); nothing in the workspace
-  triggers it. A line like `! some text` is shorthand for `print('some text')`.
+  triggers it. A line like `! Lenses["lens1"].get_text()` is shorthand for `print(...)`.
+- **Plots**: line, scatter, bar and histogram plots drawn entirely by scripts
+  (`Plots["plot1"].line(x, y)`), including live logging with `append`. Zoom and pan with the
+  mouse; the panel handles colours, grid, legend, crosshair and saving (PNG / CSV).
 - **Notes**: write in Markdown or plain text, preview it rendered, open/save `.md` / `.txt`
   files, and read or replace a note from scripts as `Notes["note1"]`.
 - **Lenses**: borderless, see-through windows that stay on top. Scripts read them as
@@ -42,7 +45,7 @@ if v and i:
 
 - Python 3.9+
 - [Tesseract OCR](https://github.com/tesseract-ocr/tesseract) installed on the system
-- Python packages: `PySide6`, `mss`, `opencv-python`, `numpy`, `pytesseract`
+- Python packages: `PySide6`, `pyqtgraph`, `mss`, `opencv-python`, `numpy`, `pytesseract`
 
 Windows is the main target (lens capture uses physical-pixel window positions there). Other
 platforms work with lens positions scaled from Qt's logical coordinates.
@@ -76,7 +79,7 @@ On Windows, `toybox.bat` starts it from the project's `.venv` without a console 
 |---|---|
 | Double-click a **divider** between panels | Open a new empty space there |
 | Double-click a **window-edge line** (left, right, top, bottom) | Open a new space along that edge |
-| Click a tool in an empty space | Fill it (Lenses, Note, Script) |
+| Click a tool in an empty space | Fill it (Lenses, Note, Plot, Script) |
 | Drag a panel's **header** onto another panel | Dock it on that side (drop near an edge) or swap the two (drop in the middle) |
 | Drag a panel's header onto a **window-edge line** | Dock it along that whole edge |
 | Drag a divider | Resize |
@@ -108,17 +111,18 @@ An editor, a run bar and its own console. *Run Once* (`Ctrl+Enter`) runs the scr
 variables. *Run Continuous* repeats it every *Every* ms and keeps variables between runs; while
 anything runs, the button becomes *Stop*, which also aborts a long *Run Once*.
 
-A line whose first non-blank character is `!` prints the rest of the line as written:
+A line whose first non-blank character is `!` prints the value of the rest of the line — it is
+shorthand for `print(...)`, so it takes anything `print` takes:
 
 ```python
-! Starting measurement          # -> print('Starting measurement')
+! "Starting measurement"              # -> print("Starting measurement")
+! Lenses["lens1"].get_text()          # prints the text the lens read
 for i in range(3):
-    ! still running             # indentation is kept, so it works in blocks
+    ! f"run {i}: {v:.2f} V", "ok"     # indentation is kept, so it works in blocks
 ```
 
-The text is literal (quotes, braces and backslashes are printed as typed); use a normal
-`print(f"...")` to include values. `!` lines inside triple-quoted strings are left alone, and
-line numbers in tracebacks stay correct.
+A lone `!` prints an empty line, and a `# comment` at the end stays a comment. `!` lines inside
+triple-quoted strings are left alone, and line numbers in tracebacks stay correct.
 
 ### Note panel
 
@@ -128,6 +132,23 @@ preview (or press **Edit**) to go back to the text. Plain text works too — it 
 The ⋯ menu has **Open file…**, **Save** and **Save as…** for `.md` / `.txt` files; the line
 under the note shows its file, with `•` when it has unsaved changes. Notes are named `note1`,
 `note2`, … (double-click the name to rename) and their text is saved in projects.
+
+### Plot panel
+
+A plot is drawn by scripts (see `Plots` below); the panel controls how you look at it:
+
+- **Mouse**: wheel to zoom, drag to pan, drag an axis to zoom just that axis; right-click for
+  more view options (mouse mode, manual ranges, log scale per axis).
+- **Auto** (header): fit the view to the data again. While you haven't zoomed, the view follows
+  the data automatically; after you zoom or pan, it stays where you put it until you press Auto.
+- **Save** (header): the plot as a PNG image, or its data as CSV (`series, kind, x, y, label`).
+- **Zero lines**: subtle lines at x = 0 and y = 0. By default (*auto*) they are shown when the
+  plot has a line or scatter series and hidden for pure bar / histogram plots; the ⋯ menu can
+  switch them to *always* or *off*. They never stretch the automatic zoom range.
+- **⋯ menu**: show/hide grid, legend and crosshair (shows the x/y under the mouse below the
+  plot), zero lines, colour palette (Toybox, Colorblind, Pastel), clear the plot.
+
+Plotted data is not stored in projects (use Save); the view settings above are.
 
 ### Editor shortcuts
 
@@ -229,6 +250,38 @@ log.set_text(log.get_text() + f"\n- {Lenses['voltage'].get_float()} V")
 
 Using a note after its panel was closed raises a clear `RuntimeError`.
 
+### `Plots`
+
+A dict that maps Plot panel names to plot handles. Every series has a **name**: plotting the
+same name again replaces that series in place (ideal for *Run Continuous*); calls without
+`name=` add a new series (`line1`, `bar1`, …). Colours come from the panel's palette unless you
+pass `color=` (a name like `"red"`, `"#ff8800"` or `(255, 136, 0)`).
+
+| Method | Description |
+|---|---|
+| `line(x, y=None, name=None, color=None, width=2, style="-")` | Line through the points; `line(y)` uses x = 0, 1, 2, …; `style` `"-"`, `"--"`, `":"`, `"-."` |
+| `scatter(x, y=None, name=None, color=None, size=7, symbol="o")` | Points; `symbol` `"o"`, `"s"`, `"t"`, `"d"`, `"+"`, `"x"`, `"*"` |
+| `bar(x, heights=None, name=None, color=None, width=0.8)` | Bars; `x` may be numbers or labels (`bar(["mon", "tue"], [3, 5])`); `bar(heights)` puts them at 0, 1, 2, … |
+| `hist(values, bins=20, name=None, color=None, range=None)` | Histogram; `bins` is a count or a list of bin edges |
+| `append(name, y, x=None, color=None, max_points=None)` | Add one point to a line series (created if new). Without `x`, x is the **seconds since the plot's first appended point** (the first point is 0). `max_points` keeps only the newest points |
+| `remove(name)` / `clear()` | Remove one series / all series (`clear` also restarts the `append` clock at 0) |
+| `title(text)`, `xlabel(text)`, `ylabel(text)` | Labels (stay after `clear()`); an empty text removes them |
+| `xlim(low, high)`, `ylim(low, high)` | Fix an axis range; `xlim()` with no arguments makes it automatic again |
+
+```python
+# Run Continuous: log a lens reading every interval (x = 0, 0.5, 1.0, ... s)
+p = Plots["plot1"]
+if "started" not in globals():
+    p.clear()
+    p.title("Supply voltage"); p.ylabel("V")
+    started = True
+p.append("voltage", Lenses["voltage"].get_float() or 0, max_points=600)
+```
+
+Data is checked in the script (wrong lengths or unknown colours raise a clear error there) and
+drawn in batches, so even `for` loops with thousands of `append` calls stay smooth. Using a plot
+after its panel was closed raises a clear `RuntimeError`.
+
 ### Whitelist presets
 
 Plain strings that you can combine, e.g. `ALPHANUM + "-_"` or `NUMERIC + "%"`:
@@ -295,7 +348,7 @@ toybox/
 │   ├── executor.py      Script runner: worker thread per script, per-thread print() routing, stop
 │   ├── bridge.py        gui_call(): run a function on the GUI thread from a script thread
 │   ├── project_io.py    Project / layout files (validation, atomic save, v1 import)
-│   └── script_syntax.py "! text" print shorthand
+│   └── script_syntax.py "! expr" print shorthand
 ├── editor/
 │   ├── helpers.py       Editing rules as pure string functions (testable without a display)
 │   └── code_editor.py   QPlainTextEdit + line numbers + Python highlighting + the rules
@@ -303,6 +356,7 @@ toybox/
 │   ├── base.py          Panel contract + registry
 │   ├── lenses_panel.py
 │   ├── note_panel.py
+│   ├── plot_panel.py
 │   └── script_panel.py
 ├── ui/
 │   ├── main_window.py   Menus, projects, layouts, preferences, session restore

@@ -12,7 +12,7 @@ executor.py - Script execution engine (no GUI code).
 * Scripts drive the workspace one-way: they run predictably, when Run is
   pressed, and nothing in the GUI triggers them.
 * Before compiling, Toybox shorthands are expanded (see script_syntax.py),
-  e.g. a line "! some text" becomes print('some text').
+  e.g. a line "! expr" becomes print(expr).
 """
 
 import ctypes

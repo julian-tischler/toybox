@@ -9,7 +9,8 @@ import sys
 
 def _check_dependencies() -> None:
     missing = []
-    for module, package in (("PySide6", "PySide6"), ("mss", "mss"), ("cv2", "opencv-python"),
+    for module, package in (("PySide6", "PySide6"), ("pyqtgraph", "pyqtgraph"),
+                            ("mss", "mss"), ("cv2", "opencv-python"),
                             ("numpy", "numpy"), ("pytesseract", "pytesseract")):
         try:
             __import__(module)
