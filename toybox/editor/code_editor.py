@@ -12,6 +12,7 @@ from PySide6.QtGui import (QColor, QFont, QFontMetricsF, QGuiApplication, QKeySe
                            QPainter, QSyntaxHighlighter, QTextCharFormat, QTextCursor)
 from PySide6.QtWidgets import QPlainTextEdit, QWidget
 
+from ..core.script_syntax import is_bang_line
 from . import helpers as H
 
 CODE_FONT = ("Consolas", 11)
@@ -55,6 +56,13 @@ class PythonHighlighter(QSyntaxHighlighter):
         self._comment = _fmt(_COLORS["comment"], italic=True)
 
     def highlightBlock(self, text: str) -> None:
+        if self.previousBlockState() not in (1, 2) and is_bang_line(text):
+            # "! text" print shorthand: the text is literal, not Python.
+            bang = len(text) - len(text.lstrip())
+            self.setFormat(bang, 1, self._rules[0][1])
+            self.setFormat(bang + 1, len(text) - bang - 1, self._string)
+            self.setCurrentBlockState(0)
+            return
         for rx, fmt, group in self._rules:
             for m in rx.finditer(text):
                 self.setFormat(m.start(group), m.end(group) - m.start(group), fmt)

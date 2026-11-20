@@ -9,8 +9,10 @@ executor.py - Script execution engine (no GUI code).
   drains the queue on the GUI thread into its own console.
 * Variables persist between runs until `reset_namespace()` is called, which lets
   a continuous script keep state (counters, previous values, ...).
-* Scripts only ever *read* from the workspace (one-way): they run predictably,
-  when Run is pressed, and nothing in the GUI triggers them.
+* Scripts drive the workspace one-way: they run predictably, when Run is
+  pressed, and nothing in the GUI triggers them.
+* Before compiling, Toybox shorthands are expanded (see script_syntax.py),
+  e.g. a line "! some text" becomes print('some text').
 """
 
 import ctypes
@@ -21,6 +23,7 @@ import threading
 import traceback
 from typing import Dict, List, Mapping, Optional, Tuple
 
+from . import script_syntax
 from .vision import WHITELIST_PRESETS
 
 SCRIPT_NAME = "<script>"
@@ -157,7 +160,7 @@ class ScriptExecutor:
         with _routes_lock:
             _routes[ident] = self._queue
         try:
-            code = compile(source, SCRIPT_NAME, "exec")
+            code = compile(script_syntax.expand(source), SCRIPT_NAME, "exec")
             exec(code, self.namespace)
         except ScriptStopped:
             self.log("[script stopped]\n", "info")

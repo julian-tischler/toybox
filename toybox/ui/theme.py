@@ -54,6 +54,7 @@ QToolButton {{ background: transparent; border: none; border-radius: 4px; paddin
 QToolButton:hover {{ background: {BTN_HOVER}; }}
 QToolButton:pressed {{ background: {BTN_PRESSED}; }}
 QToolButton::menu-indicator {{ image: none; }}
+QToolButton:checked {{ background: {BTN_PRESSED}; }}
 
 QLineEdit, QSpinBox {{ background: {FIELD}; border: 1px solid {BORDER}; border-radius: 3px;
                        padding: 3px 5px; selection-background-color: {SELECTION}; }}

@@ -26,6 +26,8 @@ OUTPUT_POLL_MS = 30
 DEFAULT_SCRIPT = '''\
 # Lenses["name"].get_text() / .get_float() / .get_color_avg() / .get_raw()
 # Only one colour:  Lenses["name"].color_mask("green").get_text()
+# Notes["note1"].get_text() / .set_text("...")
+# A line "! some text" prints some text.
 # Run: Ctrl+Enter.  Run Continuous keeps variables between runs.
 
 '''

@@ -23,7 +23,10 @@ if v and i:
 - **Multiple instances**: several Script panels can run side by side, each with its own editor,
   console, interval and variables.
 - **Scripts are one-way and predictable**: a script runs only when you press *Run* (or
-  `Ctrl+Enter`). It reads from the workspace; nothing in the workspace triggers it.
+  `Ctrl+Enter`). It can read and write tools (lenses, notes, …); nothing in the workspace
+  triggers it. A line like `! some text` is shorthand for `print('some text')`.
+- **Notes**: write in Markdown or plain text, preview it rendered, open/save `.md` / `.txt`
+  files, and read or replace a note from scripts as `Notes["note1"]`.
 - **Lenses**: borderless, see-through windows that stay on top. Scripts read them as
   `Lenses["name"]` (text, numbers, average colour, raw pixels, colour masks). Lenses briefly
   become invisible during each capture, so they never appear in the pixels.
@@ -73,7 +76,7 @@ On Windows, `toybox.bat` starts it from the project's `.venv` without a console 
 |---|---|
 | Double-click a **divider** between panels | Open a new empty space there |
 | Double-click a **window-edge line** (left, right, top, bottom) | Open a new space along that edge |
-| Click a tool in an empty space | Fill it (Lenses, Script, …) |
+| Click a tool in an empty space | Fill it (Lenses, Note, Script) |
 | Drag a panel's **header** onto another panel | Dock it on that side (drop near an edge) or swap the two (drop in the middle) |
 | Drag a panel's header onto a **window-edge line** | Dock it along that whole edge |
 | Drag a divider | Resize |
@@ -104,6 +107,27 @@ even when no Lenses panel is open.
 An editor, a run bar and its own console. *Run Once* (`Ctrl+Enter`) runs the script with fresh
 variables. *Run Continuous* repeats it every *Every* ms and keeps variables between runs; while
 anything runs, the button becomes *Stop*, which also aborts a long *Run Once*.
+
+A line whose first non-blank character is `!` prints the rest of the line as written:
+
+```python
+! Starting measurement          # -> print('Starting measurement')
+for i in range(3):
+    ! still running             # indentation is kept, so it works in blocks
+```
+
+The text is literal (quotes, braces and backslashes are printed as typed); use a normal
+`print(f"...")` to include values. `!` lines inside triple-quoted strings are left alone, and
+line numbers in tracebacks stay correct.
+
+### Note panel
+
+Write in the editor; the **Preview** button in the header renders the note as Markdown
+(headings, lists, task lists `- [ ]`, tables, **bold**, `code`, links). Double-click the
+preview (or press **Edit**) to go back to the text. Plain text works too — it is shown as is.
+The ⋯ menu has **Open file…**, **Save** and **Save as…** for `.md` / `.txt` files; the line
+under the note shows its file, with `•` when it has unsaved changes. Notes are named `note1`,
+`note2`, … (double-click the name to rename) and their text is saved in projects.
 
 ### Editor shortcuts
 
@@ -189,6 +213,22 @@ pixels that are not green.
 channel. White contains every channel, though, so use `color_mask` to separate coloured text
 from white text.
 
+### `Notes`
+
+A dict that maps Note panel names to note handles (only notes that are open in the workspace).
+
+| Method | Description |
+|---|---|
+| `Notes["note1"].get_text()` | The note's text (its Markdown source) as a `str` |
+| `Notes["note1"].set_text(new_text)` | Replace the note's text (one `Ctrl+Z` in the note undoes it); a shown preview updates too |
+
+```python
+log = Notes["log"]
+log.set_text(log.get_text() + f"\n- {Lenses['voltage'].get_float()} V")
+```
+
+Using a note after its panel was closed raises a clear `RuntimeError`.
+
 ### Whitelist presets
 
 Plain strings that you can combine, e.g. `ALPHANUM + "-_"` or `NUMERIC + "%"`:
@@ -254,13 +294,15 @@ toybox/
 │   ├── lenses.py        LensWindow (transparent overlay) + LensManager (registry, hide-while-measuring)
 │   ├── executor.py      Script runner: worker thread per script, per-thread print() routing, stop
 │   ├── bridge.py        gui_call(): run a function on the GUI thread from a script thread
-│   └── project_io.py    Project / layout files (validation, atomic save, v1 import)
+│   ├── project_io.py    Project / layout files (validation, atomic save, v1 import)
+│   └── script_syntax.py "! text" print shorthand
 ├── editor/
 │   ├── helpers.py       Editing rules as pure string functions (testable without a display)
 │   └── code_editor.py   QPlainTextEdit + line numbers + Python highlighting + the rules
 ├── panels/              One module per tool
 │   ├── base.py          Panel contract + registry
 │   ├── lenses_panel.py
+│   ├── note_panel.py
 │   └── script_panel.py
 ├── ui/
 │   ├── main_window.py   Menus, projects, layouts, preferences, session restore
