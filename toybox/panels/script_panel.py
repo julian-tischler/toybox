@@ -28,6 +28,7 @@ DEFAULT_SCRIPT = '''\
 # Only one colour:  Lenses["name"].color_mask("green").get_text()
 # Notes["note1"].get_text() / .set_text("...")
 # Plots["plot1"].line(x, y, name="v") / .scatter / .bar / .hist / .append("v", value)
+# Definitions["definition1"].assign(lambda a, b: a + b)
 # "! expr" prints expr:  ! "hello"   ! Lenses["name"].get_text()
 # Run: Ctrl+Enter.  Run Continuous keeps variables between runs.
 

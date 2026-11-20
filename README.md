@@ -25,6 +25,10 @@ if v and i:
 - **Scripts are one-way and predictable**: a script runs only when you press *Run* (or
   `Ctrl+Enter`). It can read and write tools (lenses, notes, …); nothing in the workspace
   triggers it. A line like `! Lenses["lens1"].get_text()` is shorthand for `print(...)`.
+- **Definitions**: a script hands a function to a Definition panel
+  (`Definitions["definition1"].assign(lambda a, b: a + b)`); the panel shows one input field
+  per parameter, a result and a history — for predefined calculations, unit conversions (with
+  a *Live* mode) or text tweaks.
 - **Plots**: line, scatter, bar and histogram plots drawn entirely by scripts
   (`Plots["plot1"].line(x, y)`), including live logging with `append`. Zoom and pan with the
   mouse; the panel handles colours, grid, legend, crosshair and saving (PNG / CSV).
@@ -79,7 +83,7 @@ On Windows, `toybox.bat` starts it from the project's `.venv` without a console 
 |---|---|
 | Double-click a **divider** between panels | Open a new empty space there |
 | Double-click a **window-edge line** (left, right, top, bottom) | Open a new space along that edge |
-| Click a tool in an empty space | Fill it (Lenses, Note, Plot, Script) |
+| Click a tool in an empty space | Fill it (Script, Lenses, Note, Plot, Definition) |
 | Drag a panel's **header** onto another panel | Dock it on that side (drop near an edge) or swap the two (drop in the middle) |
 | Drag a panel's header onto a **window-edge line** | Dock it along that whole edge |
 | Drag a divider | Resize |
@@ -149,6 +153,22 @@ A plot is drawn by scripts (see `Plots` below); the panel controls how you look 
   plot), zero lines, colour palette (Toybox, Colorblind, Pastel), clear the plot.
 
 Plotted data is not stored in projects (use Save); the view settings above are.
+
+### Definition panel
+
+Shows the function a script assigned: one input field per parameter (with its type next to
+it), **Calculate** (or Enter in any field), the result with a **Copy** button, and a **history**
+of past results (newest first; double-click an entry to put its inputs back; ⋯ → Clear history).
+
+- **Live** (header): recalculate while you type — handy for unit conversions. Live results are
+  not added to the history; press Enter to keep one.
+- Errors (a field that can't be converted, or an exception in the function) appear in red in
+  the result field.
+- The function runs in the background, so it may read lenses or take a while ("Running…");
+  `print()` inside it goes to the console of the script that assigned it.
+- Inputs, history and Live mode are saved in projects. The function itself can't be saved:
+  after opening a project the panel says *Not assigned* until you run the script that assigns
+  it again — your inputs stay.
 
 ### Editor shortcuts
 
@@ -282,6 +302,38 @@ Data is checked in the script (wrong lengths or unknown colours raise a clear er
 drawn in batches, so even `for` loops with thousands of `append` calls stay smooth. Using a plot
 after its panel was closed raises a clear `RuntimeError`.
 
+### `Definitions`
+
+A dict that maps Definition panel names to handles with one method:
+
+`Definitions["definition1"].assign(fn, **types)` — show `fn` in the panel. `fn` can be a
+lambda or a normal `def` (its name and the first docstring line are shown above the fields).
+`*args` / `**kwargs` parameters are not supported.
+
+```python
+Definitions["definition1"].assign(lambda a, b: a + b)
+Definitions["temp"].assign(lambda c: c * 9 / 5 + 32, c=float)        # °C -> °F (try Live)
+Definitions["names"].assign(lambda name, suffix="_v2": name + suffix)
+
+def ohm(u: float, r: float = 100):
+    """Current through a resistor [A]"""
+    return u / r
+Definitions["ohm"].assign(ohm)
+```
+
+How a field's text is converted, most explicit first:
+
+1. the parameter's **annotation** (`u: float`),
+2. a **type passed to `assign`** (`c=float`) — any callable works, e.g. `name=str.upper`,
+3. the **type of its default value** (`suffix="_v2"` → text, `n=1` → int),
+4. otherwise **auto**: a Python literal (`3`, `2.5`, `[1, 2]`, `True`, `'quoted text'`),
+   and anything that isn't a literal is passed as text.
+
+An empty field uses the parameter's default (shown as a placeholder). Use `.` as the decimal
+mark (`2.5`). `bool` fields accept true/false, yes/no, 1/0. Floats are shown with up to 12
+significant digits (`0.1 + 0.2` → `0.3`). Assigning again keeps what you typed into fields
+whose parameter names still exist.
+
 ### Whitelist presets
 
 Plain strings that you can combine, e.g. `ALPHANUM + "-_"` or `NUMERIC + "%"`:
@@ -357,6 +409,7 @@ toybox/
 │   ├── lenses_panel.py
 │   ├── note_panel.py
 │   ├── plot_panel.py
+│   ├── definition_panel.py
 │   └── script_panel.py
 ├── ui/
 │   ├── main_window.py   Menus, projects, layouts, preferences, session restore

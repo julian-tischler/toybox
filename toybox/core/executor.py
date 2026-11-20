@@ -21,6 +21,7 @@ import queue
 import sys
 import threading
 import traceback
+from contextlib import contextmanager
 from typing import Dict, List, Mapping, Optional, Tuple
 
 from . import script_syntax
@@ -83,6 +84,28 @@ class _RoutedStream(io.TextIOBase):
                 self._fallback.flush()
             except (OSError, ValueError, AttributeError):
                 pass
+
+
+def current_output_queue() -> Optional["queue.Queue[Tuple[str, str]]"]:
+    """The console queue print() goes to in the calling thread (None outside scripts)."""
+    return _routes.get(threading.get_ident())
+
+
+@contextmanager
+def output_routed_to(target: Optional["queue.Queue[Tuple[str, str]]"]):
+    """Send print() of the current thread to `target` (e.g. a script's console)
+    while the block runs - used when a tool runs a function a script handed it."""
+    ident = threading.get_ident()
+    if target is None:
+        yield
+        return
+    with _routes_lock:
+        _routes[ident] = target
+    try:
+        yield
+    finally:
+        with _routes_lock:
+            _routes.pop(ident, None)
 
 
 _installed: Optional[Tuple[object, object]] = None

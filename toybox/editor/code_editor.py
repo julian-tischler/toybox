@@ -41,12 +41,19 @@ class PythonHighlighter(QSyntaxHighlighter):
                  "sorted enumerate zip map filter isinstance any all open type bool None "
                  "True False Lenses").split()
 
+    @staticmethod
+    def _tool_names():
+        """Script collections of all registered tools (Plots, Notes, ...)."""
+        from ..panels.base import REGISTRY
+        return [n for n in (cls.script_collection() for cls in REGISTRY.values()) if n]
+
     def __init__(self, document):
         super().__init__(document)
+        names = list(dict.fromkeys(self._BUILTINS + self._tool_names()))
         # (pattern, format, capture group to colour)
         self._rules = [
             (re.compile(r"\b(?:" + "|".join(keyword.kwlist) + r")\b"), _fmt(_COLORS["keyword"]), 0),
-            (re.compile(r"\b(?:" + "|".join(self._BUILTINS) + r")\b"), _fmt(_COLORS["builtin"]), 0),
+            (re.compile(r"\b(?:" + "|".join(names) + r")\b"), _fmt(_COLORS["builtin"]), 0),
             (re.compile(r"\bself\b"), _fmt(_COLORS["self"], italic=True), 0),
             (re.compile(r"\b[0-9]+(?:\.[0-9]*)?(?:[eE][-+]?[0-9]+)?\b"), _fmt(_COLORS["number"]), 0),
             (re.compile(r"^\s*@[\w.]+"), _fmt(_COLORS["decorator"]), 0),
