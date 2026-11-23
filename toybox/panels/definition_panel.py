@@ -28,11 +28,11 @@ import inspect
 import threading
 from typing import List, Optional
 
-from PySide6.QtCore import QTimer
+from PySide6.QtCore import QSize, QTimer
 from PySide6.QtGui import QFont, QGuiApplication
 from PySide6.QtWidgets import (QFormLayout, QFrame, QHBoxLayout, QLabel, QLineEdit, QListWidget,
-                               QListWidgetItem, QPushButton, QScrollArea, QToolButton,
-                               QVBoxLayout, QWidget)
+                               QListWidgetItem, QPushButton, QScrollArea, QSizePolicy,
+                               QToolButton, QVBoxLayout, QWidget)
 
 from ..core.bridge import gui_call
 from ..core.executor import current_output_queue, output_routed_to
@@ -157,6 +157,28 @@ class DefinitionHandle:
 
 
 # ------------------------------------------------------------------ panel
+class _FieldsArea(QScrollArea):
+    """Scroll area that asks the layout for exactly its content's height, so the
+    input fields get the room they need and the history takes what is left.
+    Only when the panel is too short does it shrink (to about one row) and scroll."""
+
+    ROW = 34
+
+    def __init__(self):
+        super().__init__()
+        self.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Maximum)
+
+    def _content_height(self) -> int:
+        w = self.widget()
+        return (w.sizeHint().height() if w is not None else 0) + 2 * self.frameWidth()
+
+    def sizeHint(self) -> QSize:
+        return QSize(super().sizeHint().width(), self._content_height())
+
+    def minimumSizeHint(self) -> QSize:
+        return QSize(super().minimumSizeHint().width(), min(self.ROW, self._content_height()))
+
+
 @register
 class DefinitionPanel(Panel):
     kind = "definition"
@@ -192,7 +214,7 @@ class DefinitionPanel(Panel):
         self.desc.setProperty("muted", True)
         lay.addWidget(self.desc)
 
-        scroll = QScrollArea()
+        scroll = _FieldsArea()
         scroll.setWidgetResizable(True)
         scroll.setFrameShape(QFrame.NoFrame)
         scroll.setStyleSheet("QScrollArea, QScrollArea > QWidget > QWidget { background: transparent; }")
@@ -270,10 +292,9 @@ class DefinitionPanel(Panel):
             self.form.addRow(spec["name"], cell)
             self.fields[spec["name"]] = edit
         # Fields take the height they need (scrolling only beyond ~8 rows).
-        self.form_host.adjustSize()
         self.scroll.setVisible(bool(self.params))
-        if self.params:
-            self.scroll.setFixedHeight(min(self.form_host.sizeHint().height(), 8 * 34))
+        self.form_host.updateGeometry()
+        self.scroll.updateGeometry()           # re-read its content height
 
     def _show_function(self) -> None:
         assigned = self.fn is not None
